@@ -2,8 +2,10 @@ const util = require('util')
 const api = require('../api')
 const c = require('../pairs');
 const view = require('../view')
+const model = require('../model')
+const bidAskView = view.bestOrders;
+const connectionView = view.connection;
 
-// console.log(api)
 const setTimeoutPromise = util.promisify(setTimeout)
 const time = 10 * 1000 * 2;
 
@@ -16,31 +18,20 @@ const transactions = async ()=> {
     console.log(res.transactions.data);  
 }
 const order_book = async () => {
-    var res = await api.order_book(c.market.btc, c.currency.isk)
-    console.log(res);  
+    return res = await api.order_book(c.market.btc, c.currency.isk)
 }
+
 const historical_prices = async ()=> {
     var res = await api.historical_prices(c.market.btc, c.currency.isk, c.timeframe.mo1)
     console.log(res)
 }
- // private
-const balances_and_info_P = async ()=> {
-    var r = await api.balances_and_info();
-    console.log(r);
-    const o = r['balances-and-info'];
-    console.log(o);
-    console.log(o.available.BTC);
-    console.log(o.available.ISK);
-}
 
 const balances_and_info = async ()=> {
-    var r = await api.balances_and_info();
-    return r['balances-and-info'];
+    return await api.balances_and_info();
 }
 
 const open_orders = async ()=> {
-    var r = await api.balances_and_info();
-    console.log(r);
+    return await api.open_orders();
 }
 
 const user_transactions = async ()=> {
@@ -64,23 +55,49 @@ const withdrawals = async ()=> {
     console.log(r);
 }
 
+const composite = view.composite
+composite.foo(
+    //[connectionView, bidAskView])
+   [connectionView, bidAskView, view.status])
+
 const main = async () => {
+    connectionView.fetching()
+
+    composite.draw()
+
     const state = await sync();
     // await transactions();
-    // await order_book();
     // await historical_prices();
-    const balance = await balances_and_info();
+
+    const bal = await balances_and_info();
+    // log(bal.AvailableISK())
+    // log(bal.OnHoldBTC())
+
+    const openOrders = await open_orders();
+    const orderBook = await order_book();
+    bidAskView.openOrders(openOrders)
+    bidAskView.orderBook(orderBook)
+    //bidAskView.draw()
+
     // await user_transactions();
     // await crypto_deposit_address();
     // await deposits();
     // await withdrawals();
-    view.status.market(state.stats)
-    view.status.balance(balance)
-    view.status.draw()
+    // console.log(state)
+
+     view.status.market(state.stats)
+     view.status.balance(bal)
+      //view.status.draw()
+    //  let con = view.composite.draw(
+    //      [connectionView, bidAskView, view.status])
+    connectionView.done()
+    composite.draw();
 
     await setTimeoutPromise(time)
     main();
 }
+
+const log = (s) => console.log(s);
 
 module.exports = {
     start: async () => {

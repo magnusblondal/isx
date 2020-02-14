@@ -2,13 +2,18 @@ const config  = require('../configuration')
 const Http = require('./http');
 const crypto  = require('./crypt')
 const c = require('../pairs');
+const model = require('../model')
 
 const http = new Http();
 const uri = config.get('isx-uri')
 
+const post = async (path, params={})  =>
+  await http.post(`${uri}${path}`, crypto.sign(params));
+
 module.exports = {
     balances_and_info: async function() {
-        return await http.post(`${uri}balances-and-info`, crypto.sign({}))
+        var r = await post(`balances-and-info`)
+        return new model.BalancesAndInfo(r)
     },
 
     open_orders: async function(market, currency) {
@@ -16,7 +21,8 @@ module.exports = {
             market: market,
             currency: currency
         };       
-        return await http.post(`${uri}open-orders`, crypto.sign(params))
+        const res = await post(`open-orders`, params)
+        return new model.OpenOrders(res)
     },
     
     /*
